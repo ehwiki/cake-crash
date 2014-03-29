@@ -6,16 +6,15 @@ var game = new game();
 var cmTID;
 
 
-//game.updateAll();
-//
-
-function moveThings(){
+//updates the position and redraws everything on the screen
+function updateEverything(){
 	game.moveEverything();
+	game.updateAll();
 
 	//move everything again
 	clearTimeout(cmTID);
 	if(!game.gameOver){
-		cmTID = setTimeout(moveThings, game.timeStep);
+		cmTID = setTimeout(updateEverything, game.timeStep);
 	}
 }
 
@@ -163,12 +162,14 @@ function game(){
 
 	this.cake = new cake(150, 120, 50, canvas.height - 200);
 	this.launch = new launcher();
-	this.timeStep = 50;
+	this.fps = 60;
+	this.timeStep = 1000 / 60;
 	this.gameOver = false;
 
-	this.updateAll = function(){
+	//clears the screen and redraws every element
+	this.updateAll = function(can, ctx){
 		//TODO: PUT ALL THE DRAWS IN HERE
-		//This is called as often as possible
+		ctx.clearRect(0, 0, can.width, can.height);
 		cake.draw();
 		//launch.draw();
 	}
@@ -179,9 +180,9 @@ function game(){
 		//After launch, the x of the cake should be in the center of the screen
 	}
 
+	//updates the position of every onscreen element
 	this.moveEverything = function(){
-
-		//moves everything that needs to be moved. This is going to be called in a timeout event
+		//moves everything that needs to be moved.
 		cake.move();
 		//launcher.move();
 	}
