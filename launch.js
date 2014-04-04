@@ -1,15 +1,20 @@
 window.onload = function(){
 var canvas = document.getElementById("game");
 console.log("c has been created");
+console.log(canvas.height);
 var c = canvas.getContext("2d");
-var game = new game();
+var game = new game(canvas);
 var cmTID;
+
+updateEverything();
+game.cake.setGreased(true);
+game.cake.launch(20, 45);
 
 
 //updates the position and redraws everything on the screen
 function updateEverything(){
 	game.moveEverything();
-	game.updateAll();
+	game.updateAll(canvas, c);
 
 	//move everything again
 	clearTimeout(cmTID);
@@ -18,6 +23,9 @@ function updateEverything(){
 	}
 }
 
+function getCanvas(){
+	return
+}
 
 
 function cake (height, width, x, y){
@@ -30,32 +38,38 @@ function cake (height, width, x, y){
 	this.currentHeight = 0;			//the height that the cake is. Used to say how high up it is without
 									//drawing the cake on the screen
 	this.g = 0.98;					//gravity. when moving, this.dy += this.g
-	this.groundLevel = y;			//
+	this.groundLevel = y;			//where the ground is
+	this.greased = false;			//if the cake is greased
 
+	console.log("x: " + this.x + " y: " + this.y);
 	//sets initial speed of the cake and an initial rotation
 	this.launch = function(power, angle){
 		var initialDx = power * Math.cos(angle);
 		var initialDy = power * Math.sin(angle);
 		this.dx = initialDx;
 		this.dy = initialDy;
+		console.log("dx after launch: " + this.dx + "dy after launch: " + this.dy);
 	};
 
 	//gets the horizontal speed to know how quickly to scroll everything
-	this.getHorizontalSpeed(){
+	this.getHorizontalSpeed = function(){
 		return this.dx;
 	}
 
 	this.draw = function(){
-		console.log("Drawing a rectangle at " + this.x + " and " + this.y);
+		var xPos = this.x - (this.w / 2);
+		var yPos = this.y - (this.h / 2);
+		//console.log("Drawing a rectangle at " + xPos + " and " + yPos);
 		c.strokeStyle = "#000000";
-		c.strokeRect(this.x - (this.h/2), this.y - (this.w/2), this.w, this.h);
+		c.strokeRect(xPos, yPos, this.w, this.h);
 	};
 
 	//moves the cake
 	this.move = function(){
 		//change its vertical velocity by gravity
-		this.dy += this.gravity;
-		//change its y position by vertical velocity
+		this.dy += this.g;
+		//change its x and y position by horizontal and vertical velocity
+		this.x += this.dx;
 		this.y += this.dy;
 		//change its height by vertical velocity
 		//Since negative means up on a canvas and positive means down, we subtract dy
@@ -65,13 +79,13 @@ function cake (height, width, x, y){
 		//in the very beginning, the cake is not in the center of the screen
 		//	this lets it move there. Once there, it stays there. It will only
 		//	change heights
-		if(this.x < c.width / 2){
+		if(this.x < canvas.width / 2){
 			this.x += this.dx;
-			if(this.x > c.width / 2){
-				this.x = c.width / 2;
-			}
+		}else if(this.x > canvas.width / 2){
+			this.x = canvas.width / 2;
 		}
-		if(this.y < this.groundLevel){
+		//console.log("y: " + this.y + "groundLevel: " + this.groundLevel);
+		if(this.y > this.groundLevel){
 			this.y = this.groundLevel;
 			if(this.isGreased())
 				this.bounce(1);
@@ -89,8 +103,16 @@ function cake (height, width, x, y){
 	//the cake has hit a surface and is bouncing.
 	//	The amount of energy lost by the bounce depends on surface
 	this.bounce = function(energyLost){
-		this.dy *= energyLost;
+		this.dy *= -1 * energyLost;
 		this.dx *= energyLost;
+	}
+
+	this.setGreased = function(status){
+		this.greased = status;
+	}
+
+	this.isGreased = function(){
+		return this.greased;
 	}
 
 };
@@ -118,21 +140,23 @@ function launcher(){
 
 	//changes the angle of the launcher
 	this.adjustAngle = function(){
-		if(this.currentAngle >== this.maxAngle || this.currentAngle <== this.minAngle)
+		if(this.currentAngle >= this.maxAngle || this.currentAngle <= this.minAngle){
 			this.changeAngleRate();
+		}
 		this.currentAngle += this.angleRate;
 	};
 
 	//changes the power in the launcher
 	this.adjustPower = function(){
-		if(this.currentPower ==> this.maxPower || this.minPower <== this.minPower)
+		if(this.currentPower >= this.maxPower || this.minPower <= this.minPower){
 			this.changePowerRate();
+		}
 		this.currentPower += this.powerRate;
 	};
 
 	//changes which phase the launcher is in
 	this.setPhase = function(newPhase){
-		if(newPhase >== 0 && newPhase <== 2){
+		if(newPhase >= 0 && newPhase <= 2){
 			this.phase = newPhase;
 			console.log("Phase changed to " + this.phase);
 		}
@@ -158,9 +182,12 @@ function launcher(){
 	//	Shifts the phase and gets the angle and power
 };
 
-function game(){
-
-	this.cake = new cake(150, 120, 50, canvas.height - 200);
+function game(ca){
+	console.log(ca.height);
+	var xPos = 50;
+	var yPos = ca.height - 200;
+	console.log("y: " + yPos);
+	this.cake = new cake(150, 120, xPos, yPos);
 	this.launch = new launcher();
 	this.fps = 60;
 	this.timeStep = 1000 / 60;
@@ -170,7 +197,7 @@ function game(){
 	this.updateAll = function(can, ctx){
 		//TODO: PUT ALL THE DRAWS IN HERE
 		ctx.clearRect(0, 0, can.width, can.height);
-		cake.draw();
+		this.cake.draw(can);
 		//launch.draw();
 	}
 
@@ -183,7 +210,7 @@ function game(){
 	//updates the position of every onscreen element
 	this.moveEverything = function(){
 		//moves everything that needs to be moved.
-		cake.move();
+		this.cake.move();
 		//launcher.move();
 	}
 }
